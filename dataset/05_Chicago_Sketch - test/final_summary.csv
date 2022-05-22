@@ -1,0 +1,17 @@
+, number of zones defined in node.csv=, 387
+, number of boundary nodes defined in zone.csv=, 387
+, # of shape point records in micronet\subarea_MRM.csv=,0,
+, # of micro gate nodes,227,
+, # of macro gate nodes,12,
+, # of macro outgoing gate nodes,2,
+, # of macro incoming gate nodes,2,
+, # of node layers to be read,2,
+Step 1: read network node.csv, link.csv, zone.csv 
+,# of nodes = ,33424
+,# of links =,54703
+,# of zones =,0
+,# of bridge links =,145
+,# of micro gate nodes =,227
+,summary by multi-modal and demand types,demand_period,agent_type,# of links,avg_free_speed,total_length_in_km,total_capacity,avg_lane_capacity,avg_length_in_meter,
+,summary by road link type,link_type,link_type_name,# of links,avg_free_speed,total_length,total_capacity,avg_lane_capacity,avg_length_in_meter,
+,,2,,54546,66.322,13509.3,1.29819e+08,2380,247.668,
