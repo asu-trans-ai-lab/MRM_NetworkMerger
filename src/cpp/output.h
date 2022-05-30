@@ -53,9 +53,7 @@ using std::istringstream;
 
 void g_OutputModelFiles(int mode)
 {
-	if (mode == 1)
-	{
-
+	
 //		namespace fs = std::filesystem;
 
 		FILE* g_pFileModelNode = fopen("merged_node.csv", "w");
@@ -96,16 +94,14 @@ void g_OutputModelFiles(int mode)
 		}
 		else
 		{
-			dtalog.output() << "Error: File \\hybrid\\node.csv cannot be opened.\n It might be currently used and locked by EXCEL." << endl;
+			dtalog.output() << "Error: File \\merged_node.csv cannot be opened.\n It might be currently used and locked by EXCEL." << endl;
 			g_program_stop();
 
 
 		}
 
-	}
+	
 
-	if (mode == 2)
-	{
 		FILE* g_pFileModelLink = fopen("merged_link.csv", "w");
 
 		if (g_pFileModelLink != NULL)
@@ -173,85 +169,9 @@ void g_OutputModelFiles(int mode)
 		}
 		else
 		{
-			dtalog.output() << "Error: File hybrid\\link.csv cannot be opened.\n It might be currently used and locked by EXCEL." << endl;
+			dtalog.output() << "Error: File merged_link.csv cannot be opened.\n It might be currently used and locked by EXCEL." << endl;
 			g_program_stop();
 
 		}
-
-	}
-	if (mode == 3)
-	{
-		int connector_count = 0;
-		for (int i = 0; i < g_link_vector.size(); i++)
-		{
-			if (g_link_vector[i].link_type == 1000)  // connector
-			{
-				connector_count += 1;
-			}
-		}
-
-		if (connector_count >= 1)
-		{
-			FILE* g_pFileModelLink = fopen("access_link.csv", "w");
-
-			if (g_pFileModelLink != NULL)
-			{
-				fprintf(g_pFileModelLink, "link_id,link_no,from_node_id,to_node_id,link_type,link_type_name,lanes,link_distance_VDF,free_speed,fftt,capacity,allow_uses,geometry\n");
-
-				//VDF_fftt1,VDF_cap1,VDF_alpha1,VDF_beta1
-				for (int i = 0; i < g_link_vector.size(); i++)
-				{
-					if (g_link_vector[i].link_type == 1000)  // connector
-					{
-
-						fprintf(g_pFileModelLink, "%s,%d,%d,%d,%d,%s,%d,%f,%f,%f,%f,%s,",
-							g_link_vector[i].link_id.c_str(),
-							g_link_vector[i].link_seq_no,
-							g_node_vector[g_link_vector[i].from_node_seq_no].node_id,
-							g_node_vector[g_link_vector[i].to_node_seq_no].node_id,
-							g_link_vector[i].link_type,
-							g_link_vector[i].link_type_name.c_str(),
-							g_link_vector[i].number_of_lanes,
-							g_link_vector[i].link_distance_VDF,
-							g_link_vector[i].free_speed,
-							g_link_vector[i].free_flow_travel_time_in_min,
-							g_link_vector[i].lane_capacity,
-							g_link_vector[i].VDF_period[0].allowed_uses.c_str()
-						);
-
-						if (g_link_vector[i].geometry.size() > 0)
-						{
-							fprintf(g_pFileModelLink, "\"%s\",", g_link_vector[i].geometry.c_str());
-						}
-						else
-						{
-							fprintf(g_pFileModelLink, "\"LINESTRING (");
-
-							fprintf(g_pFileModelLink, "%f %f,", g_node_vector[g_link_vector[i].from_node_seq_no].x, g_node_vector[g_link_vector[i].from_node_seq_no].y);
-							fprintf(g_pFileModelLink, "%f %f", g_node_vector[g_link_vector[i].to_node_seq_no].x, g_node_vector[g_link_vector[i].to_node_seq_no].y);
-
-							fprintf(g_pFileModelLink, ")\"");
-						}
-
-						fprintf(g_pFileModelLink, "\n");
-
-					}
-
-
-				}
-
-				fclose(g_pFileModelLink);
-			}
-			else
-			{
-				dtalog.output() << "Error: File access_link.csv cannot be opened.\n It might be currently used and locked by EXCEL." << endl;
-				g_program_stop();
-
-			}
-
-		}
-
-	}
-
 
 }

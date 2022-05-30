@@ -96,7 +96,7 @@ bool g_read_subarea_CSV_file(Assignment& assignment)
 bool g_read_micronet_subarea_CSV_file(Assignment& assignment)
 {
 	CCSVParser parser;
-	if (parser.OpenCSVFile("micronet\\subarea_MRM.csv", false))
+	if (parser.OpenCSVFile("hdnet\\subarea_MRM.csv", false))
 	{
 		while (parser.ReadRecord())
 		{
@@ -126,12 +126,12 @@ bool g_read_micronet_subarea_CSV_file(Assignment& assignment)
 		}
 		parser.CloseCSVFile();
 		
-		assignment.summary_file << ", # of shape point records in micronet\\subarea_MRM.csv=," << assignment.g_subarea_shape_points.size() << "," << endl;
+		assignment.summary_file << ", # of shape point records in hdnet\\subarea_MRM.csv=," << assignment.g_subarea_shape_points.size() << "," << endl;
 
 	}
 	else
 	{
-		dtalog.output() << "Error: file micronet\\subarea_MRM.csv is not found." << endl;
+		dtalog.output() << "Error: file hdnet\\subarea_MRM.csv is not found." << endl;
 		g_program_stop();
 	}
 	return true;
@@ -150,9 +150,9 @@ int g_MRM_subarea_filtering(Assignment& assignment)
 	CCSVParser parser;
 	if (assignment.g_MRM_subarea_shape_points.size() >= 3)  // with subarea MRM file
 	{
-		if (parser.OpenCSVFile("micronet\\node.csv", true))
+		if (parser.OpenCSVFile("hdnet\\node.csv", true))
 		{
-			dtalog.output() << "reading micronet\\node.csv" << endl;
+			dtalog.output() << "reading hdnet\\node.csv" << endl;
 
 			while (parser.ReadRecord())  // if this line contains [] mark, then we will also read field headers.
 			{
@@ -183,7 +183,7 @@ int g_MRM_subarea_filtering(Assignment& assignment)
 		}
 		else
 		{
-			dtalog.output() << "Error: File micronet\\node.csv is not found." << endl;
+			dtalog.output() << "Error: File hdnet\\node.csv is not found." << endl;
 			g_program_stop();
 		}
 
@@ -193,9 +193,9 @@ int g_MRM_subarea_filtering(Assignment& assignment)
 
 	CCSVParser parser_link;
 
-	if (parser_link.OpenCSVFile("micronet\\link.csv", true))
+	if (parser_link.OpenCSVFile("hdnet\\link.csv", true))
 	{
-		dtalog.output() << "reading micronet\\link.csv" <<endl;
+		dtalog.output() << "reading hdnet\\link.csv" <<endl;
 
 		CLink link;
 
@@ -216,13 +216,13 @@ int g_MRM_subarea_filtering(Assignment& assignment)
 
 			if (assignment.g_node_id_to_MRM_subarea_mapping.find(from_node_id) == assignment.g_node_id_to_MRM_subarea_mapping.end())
 			{
-				dtalog.output() << "Error: from_node_id " << from_node_id << " in file micronet\\link.csv is not defined in micronet\\node.csv." << endl;
+				dtalog.output() << "Error: from_node_id " << from_node_id << " in file hdnet\\link.csv is not defined in hdnet\\node.csv." << endl;
 				continue; //has not been defined
 			}
 
 			if (assignment.g_node_id_to_MRM_subarea_mapping.find(to_node_id) == assignment.g_node_id_to_MRM_subarea_mapping.end())
 			{
-				dtalog.output() << "Error: to_node_id " << to_node_id << " in file micronet\\link.csv is not defined in micronet\\node.csv." << endl;
+				dtalog.output() << "Error: to_node_id " << to_node_id << " in file hdnet\\link.csv is not defined in hdnet\\node.csv." << endl;
 				continue; //has not been defined
 			}
 // micro flagging
@@ -247,7 +247,7 @@ int g_MRM_subarea_filtering(Assignment& assignment)
 	}
 	else
 	{
-		dtalog.output() << "Error: File micronet\\link.csv is not found." << endl;
+		dtalog.output() << "Error: File hdnet\\link.csv is not found." << endl;
 		g_program_stop();
 
 	}
@@ -274,8 +274,21 @@ int g_MRM_subarea_filtering(Assignment& assignment)
 				pt.x = x_coord;
 				pt.y = y_coord;
 				// essential MRM step 2: test if inside the micro subarea
-				int micro_subarea_inside_flag = g_test_point_in_polygon(pt, assignment.g_MRM_subarea_shape_points);
-				assignment.g_node_id_to_MRM_subarea_mapping[node_id] = micro_subarea_inside_flag;
+				int subarea_inside_flag = g_test_point_in_polygon(pt, assignment.g_MRM_subarea_shape_points);
+
+
+				int zone_id = -1;
+				if (parser.GetValueByFieldName("zone_id", zone_id) && zone_id >=1 && subarea_inside_flag ==1)
+				{
+					assignment.subareaMRM_zone_id_X_mapping[zone_id] = x_coord;
+					assignment.subareaMRM_zone_id_Y_mapping[zone_id] = y_coord;
+					
+					//establish all the internal zone id to xy mapping 
+				}
+				// read zone center x and y
+
+
+				assignment.g_node_id_to_MRM_subarea_mapping[node_id] = subarea_inside_flag;
 
 			}
 
@@ -283,6 +296,7 @@ int g_MRM_subarea_filtering(Assignment& assignment)
 		parser.CloseCSVFile();
 
 	
+		assignment.summary_file << ", # of inside zones," << assignment.subareaMRM_zone_id_Y_mapping.size() << "," << endl;
 
 	if (parser_link.OpenCSVFile("link.csv", true))
 	{
@@ -402,6 +416,7 @@ void g_add_new_bridge_link(int internal_from_node_seq_no, int internal_to_node_s
 int g_MRM_subarea_adding_bridge(Assignment& assignment)
 {
 	assignment.MRM_log_file << "start adding bridges between micro and macro gate nodes." << endl;
+
 
 	int bridge_link_count = 0;
 
@@ -818,8 +833,334 @@ int g_MRM_subarea_adding_bridge(Assignment& assignment)
 
 	return bridge_link_count;
 }
-
-
+//
+//int g_MRM_subarea_adding_bridge_macro_to_micro(Assignment& assignment)
+//{
+//
+//	int bridge_link_count = 0;
+//
+//	std::vector<int> incoming_bridge_macro_link_no_vector;
+//
+//	std::vector<int> incoming_bridge_micro_link_no_vector;
+//
+//	std::vector<int> outgoing_bridge_macro_link_no_vector;
+//
+//	std::vector<int> outgoing_bridge_micro_link_no_vector;
+//
+//	FILE* g_pFileModelLink = fopen("MRM_bridge_link.csv", "w");
+//
+//	if (g_pFileModelLink != NULL)
+//	{
+//		fprintf(g_pFileModelLink, "from_node_id,to_node_id,geometry\n");
+//
+//	}
+//	else
+//	{
+//		dtalog.output() << "Error: file MRM_link.csv cannot be openned." << endl;
+//		g_program_stop();
+//	}
+//
+//	for (int i = 0; i < g_link_vector.size(); ++i)
+//	{
+//
+//		int from_node_id = g_node_vector[g_link_vector[i].from_node_seq_no].node_id;
+//		int to_node_id = g_node_vector[g_link_vector[i].to_node_seq_no].node_id;
+//
+//		if (g_link_vector[i].layer_no == 0)  //macro node
+//		{
+//
+//
+//			if (from_node_id == 9481)
+//			{
+//				int debug_code = 1;
+//			}
+//
+//			if (
+//				assignment.g_node_id_to_MRM_subarea_mapping[from_node_id] == 0 &&
+//				assignment.g_macro_node_id_to_MRM_incoming_bridge_mapping.find(to_node_id) != assignment.g_macro_node_id_to_MRM_incoming_bridge_mapping.end() &&
+//				assignment.g_macro_node_id_to_MRM_incoming_bridge_mapping[to_node_id] == 3)
+//			{
+//				incoming_bridge_macro_link_no_vector.push_back(i);
+//				g_link_vector[i].link_type = -200; // invisible
+//			}
+//
+//			if (assignment.g_node_id_to_MRM_subarea_mapping[to_node_id] == 0 &&
+//				assignment.g_macro_node_id_to_MRM_outgoing_bridge_mapping.find(from_node_id) != assignment.g_macro_node_id_to_MRM_outgoing_bridge_mapping.end() &&
+//				assignment.g_macro_node_id_to_MRM_outgoing_bridge_mapping[from_node_id] == 3)
+//			{
+//				outgoing_bridge_macro_link_no_vector.push_back(i);
+//				g_link_vector[i].link_type = -200; // invisible
+//			}
+//		}
+//
+//		if (g_link_vector[i].layer_no == 1)  //micro node
+//		{
+//
+//			if (assignment.g_micro_node_id_to_MRM_bridge_mapping.find(from_node_id) != assignment.g_micro_node_id_to_MRM_bridge_mapping.end()
+//				&&
+//				assignment.g_micro_node_id_to_MRM_bridge_mapping[from_node_id] == 2)
+//			{
+//				incoming_bridge_micro_link_no_vector.push_back(i);
+//
+//			}
+//			if (assignment.g_micro_node_id_to_MRM_bridge_mapping.find(to_node_id) != assignment.g_micro_node_id_to_MRM_bridge_mapping.end()
+//				&&
+//				assignment.g_micro_node_id_to_MRM_bridge_mapping[to_node_id] == 2)
+//			{
+//				outgoing_bridge_micro_link_no_vector.push_back(i);
+//
+//			}
+//
+//		}
+//	}
+//
+//
+//
+//	int micro_link_index = 0;
+//	for (int microj = 0; microj < incoming_bridge_micro_link_no_vector.size(); ++microj)
+//	{
+//		int j = incoming_bridge_micro_link_no_vector[microj];
+//		if (g_link_vector[j].cell_type == 2)  // lane changing arc
+//		{
+//			continue;  //skip
+//		}
+//		int from_node_id = g_node_vector[g_link_vector[j].from_node_seq_no].node_id;
+//		int to_node_id = g_node_vector[g_link_vector[j].to_node_seq_no].node_id;
+//
+//		int k = g_link_vector[j].from_node_seq_no;
+//
+//		micro_link_index++;
+//	}
+//
+//	for (int microj = 0; microj < outgoing_bridge_micro_link_no_vector.size(); ++microj)
+//	{
+//		int j = outgoing_bridge_micro_link_no_vector[microj];
+//		if (g_link_vector[j].cell_type == 2)  // lane changing arc
+//		{
+//			continue;  //skip
+//		}
+//		int from_node_id = g_node_vector[g_link_vector[j].from_node_seq_no].node_id;
+//		int to_node_id = g_node_vector[g_link_vector[j].to_node_seq_no].node_id;
+//
+//		int k = g_link_vector[j].to_node_seq_no;
+//		micro_link_index++;
+//	}
+//
+//	int macro_link_index = 0;
+//	for (int macroi = 0; macroi < incoming_bridge_macro_link_no_vector.size(); ++macroi)
+//	{
+//
+//		int i = incoming_bridge_macro_link_no_vector[macroi];
+//		int from_node_id = g_node_vector[g_link_vector[i].from_node_seq_no].node_id;
+//		int to_node_id = g_node_vector[g_link_vector[i].to_node_seq_no].node_id;
+//
+//		int k = g_link_vector[i].from_node_seq_no;
+//		macro_link_index++;
+//	}
+//
+//	for (int macroi = 0; macroi < outgoing_bridge_macro_link_no_vector.size(); ++macroi)
+//	{
+//
+//		int i = outgoing_bridge_macro_link_no_vector[macroi];
+//		int from_node_id = g_node_vector[g_link_vector[i].from_node_seq_no].node_id;
+//		int to_node_id = g_node_vector[g_link_vector[i].to_node_seq_no].node_id;
+//
+//		int k = g_link_vector[i].to_node_seq_no;
+//		macro_link_index++;
+//	}
+//
+//	// one micro to one macro matching 
+//	// from each micro incoming link, find the nearest macro incoming link  and add the connectors from the macro from node id to the micro to node id 
+//
+//	for (int macroi = 0; macroi < incoming_bridge_macro_link_no_vector.size(); ++macroi)
+//	{
+//		int i = incoming_bridge_macro_link_no_vector[macroi];
+//
+//		int from_node_id = g_node_vector[g_link_vector[i].from_node_seq_no].node_id;
+//		int to_node_id = g_node_vector[g_link_vector[i].to_node_seq_no].node_id;
+//
+//		// try 3 times
+//		for (int try_loop = 0; try_loop < 3; try_loop++)
+//		{
+//			int matching_micro_node_j = -1;
+//
+//				for (int microj = 0; microj < incoming_bridge_micro_link_no_vector.size(); ++microj)
+//			{
+//				int j = incoming_bridge_micro_link_no_vector[microj];
+//				double min_distance = 99999;
+//
+//				int from_node_id_micro = g_node_vector[g_link_vector[j].from_node_seq_no].node_id;
+//
+//				if (g_link_vector[j].cell_type == 2)  // lane changing arc
+//				{
+//					continue;  //skip
+//				}
+//
+//
+//				GDPoint p1, p2, p3, p4;
+//				p1.x = g_node_vector[g_link_vector[i].from_node_seq_no].x;
+//				p1.y = g_node_vector[g_link_vector[i].from_node_seq_no].y;
+//
+//				p2.x = g_node_vector[g_link_vector[i].to_node_seq_no].x;
+//				p2.y = g_node_vector[g_link_vector[i].to_node_seq_no].y;
+//
+//				p3.x = g_node_vector[g_link_vector[j].from_node_seq_no].x; //micro 
+//				p3.y = g_node_vector[g_link_vector[j].from_node_seq_no].y;
+//
+//				p4.x = g_node_vector[g_link_vector[j].to_node_seq_no].x;
+//				p4.y = g_node_vector[g_link_vector[j].to_node_seq_no].y;
+//
+//				// matching distance from micro cell to the macro link
+//				double local_distance2 = (g_GetPoint2Point_Distance(&p3, &p1) + g_GetPoint2Point_Distance(&p4, &p2)) / 2;
+//				double local_distance = (g_GetPoint2LineDistance(&p3, &p1, &p2) + g_GetPoint2LineDistance(&p4, &p1, &p2)) / 2 + local_distance2;
+//
+//				double relative_angle = g_Find_PPP_RelativeAngle(&p1, &p2, &p3, &p4);
+//
+//				if (try_loop == 0 && fabs(relative_angle) >= 45)  // first try to use restrictive condition
+//				{
+//					continue;
+//				}
+//
+//				if (try_loop == 1 && fabs(relative_angle) >= 90)  // second try to use restrictive condition
+//				{
+//					continue;
+//				}
+//
+//				if (local_distance < min_distance)
+//				{
+//					min_distance = local_distance;
+//					matching_micro_node_j = g_link_vector[i].from_node_seq_no;
+//				}
+//
+//			}
+//
+//
+//			if (matching_micro_node_j >= 0)
+//			{  // create a bridge connector with macro from node and micro to node
+//				int internal_from_node_seq_no = g_link_vector[i].from_node_seq_no;
+//				int internal_to_node_seq_no = matching_micro_node_j;
+//
+//
+//				//bool g_get_line_polygon_intersection(
+//				//	double Ax, double Ay,
+//				//	double Bx, double By,
+//				//	std::vector<GDPoint> subarea_shape_points)
+//
+//				bool intersect_flag = g_get_line_polygon_intersection(g_node_vector[internal_from_node_seq_no].x, g_node_vector[internal_from_node_seq_no].y,
+//					g_node_vector[internal_to_node_seq_no].x, g_node_vector[internal_to_node_seq_no].y,
+//					assignment.g_MRM_subarea_shape_points);
+//
+//				if (intersect_flag == false)  // else give another try
+//				{
+//
+//					string agent_type_str;
+//					g_add_new_bridge_link(internal_from_node_seq_no, internal_to_node_seq_no, agent_type_str, 0);
+//
+//					fprintf(g_pFileModelLink, "%d,%d,", g_node_vector[internal_from_node_seq_no].node_id, g_node_vector[internal_to_node_seq_no].node_id);
+//					fprintf(g_pFileModelLink, "\"LINESTRING (");
+//					fprintf(g_pFileModelLink, "%f %f,", g_node_vector[internal_from_node_seq_no].x, g_node_vector[internal_from_node_seq_no].y);
+//					fprintf(g_pFileModelLink, "%f %f", g_node_vector[internal_to_node_seq_no].x, g_node_vector[internal_to_node_seq_no].y);
+//					fprintf(g_pFileModelLink, ")\"");
+//					fprintf(g_pFileModelLink, "\n");
+//
+//
+//					bridge_link_count++;
+//					try_loop = 100; //exit
+//
+//				}
+//			}
+//
+//		}
+//
+//	}
+//
+//	// one micro to one macro matching 
+//	// from each micro incoming link, find the nearest macro incoming link  and add the connectors from the macro from node id to the micro to node id 
+//
+//	//for (int macroj = 0; macroj < outgoing_bridge_macro_link_no_vector.size(); ++macroj)
+//	//{
+//	//	int j = outgoing_bridge_macro_link_no_vector[macroj];
+//	//
+//	//	for (int try_loop = 0; try_loop < 3; try_loop++)
+//	//	{
+//	//		int matching_micro_node_i = -1;
+//	//		for (int microi = 0; microi < outgoing_bridge_micro_link_no_vector.size(); ++microi)
+//	//		{
+//	//			int i = outgoing_bridge_micro_link_no_vector[microi];
+//	//			double min_distance = 99999;
+//
+//	//			if (g_link_vector[i].cell_type == 2)  // lane chaning arc
+//	//			{
+//	//				continue;  //skip
+//	//			}
+//
+//	//			GDPoint p1, p2, p3, p4;
+//	//			p1.x = g_node_vector[g_link_vector[j].from_node_seq_no].x;  // macro
+//	//			p1.y = g_node_vector[g_link_vector[j].from_node_seq_no].y;
+//
+//	//			p2.x = g_node_vector[g_link_vector[j].to_node_seq_no].x;
+//	//			p2.y = g_node_vector[g_link_vector[j].to_node_seq_no].y;
+//
+//	//			p3.x = g_node_vector[g_link_vector[i].from_node_seq_no].x;  // micro
+//	//			p3.y = g_node_vector[g_link_vector[i].from_node_seq_no].y;
+//
+//	//			p4.x = g_node_vector[g_link_vector[i].to_node_seq_no].x;
+//	//			p4.y = g_node_vector[g_link_vector[i].to_node_seq_no].y;
+//
+//	//			// matching distance from micro cell to the macro link
+//	//			double local_distance2 = (g_GetPoint2Point_Distance(&p3, &p1) + g_GetPoint2Point_Distance(&p4, &p2)) / 2;
+//	//			double local_distance = (g_GetPoint2LineDistance(&p3, &p1, &p2) + g_GetPoint2LineDistance(&p4, &p1, &p2)) / 2 + local_distance2;
+//
+//	//			double relative_angle = g_Find_PPP_RelativeAngle(&p1, &p2, &p3, &p4);
+//
+//	//			if (try_loop == 0 && fabs(relative_angle) >= 45)  // first try to use restrictive condition
+//	//			{
+//	//				continue;
+//	//			}
+//
+//	//			if (try_loop == 1 && fabs(relative_angle) >= 90)  // second try to use restrictive condition
+//	//			{
+//	//				continue;
+//	//			}
+//
+//	//			if (local_distance < min_distance)
+//	//			{
+//	//				min_distance = local_distance;
+//	//				matching_micro_node_i = g_link_vector[j].to_node_seq_no;
+//	//			}
+//
+//	//		}
+//
+//
+//	//		if (matching_micro_node_i >= 0)
+//	//		{  // create a bridge connector with macro from node and micro to node
+//	//			int internal_from_node_seq_no = matching_micro_node_i;
+//	//			int internal_to_node_seq_no = g_link_vector[j].to_node_seq_no;
+//	//			bool intersect_flag = g_get_line_polygon_intersection(g_node_vector[internal_from_node_seq_no].x, g_node_vector[internal_from_node_seq_no].y,
+//	//				g_node_vector[internal_to_node_seq_no].x, g_node_vector[internal_to_node_seq_no].y,
+//	//				assignment.g_MRM_subarea_shape_points);
+//
+//	//			if (intersect_flag == false)  // else give another try
+//	//			{
+//
+//	//				string agent_type_str;
+//	//				g_add_new_bridge_link(internal_from_node_seq_no, internal_to_node_seq_no, agent_type_str, 0);
+//
+//
+//	//				bridge_link_count++;
+//	//				try_loop = 100; //exit
+//	//			}
+//	//		}
+//
+//	//	}
+//
+//	//}
+//
+//
+//	fclose(g_pFileModelLink);
+//	return bridge_link_count;
+//}
+//
 
 double g_CheckActivityNodes(Assignment& assignment)
 {
@@ -1053,46 +1394,6 @@ void g_read_input_data(Assignment& assignment)
 	dtalog.output() << "Step 1.3: Reading zone data in zone.csv..." << endl;
 
 
-	if (parser.OpenCSVFile("zone.csv", true))
-	{
-		while (parser.ReadRecord())  // if this line contains [] mark, then we will also read field headers.
-		{
-			int zone_id = 0;
-			if (!parser.GetValueByFieldName("zone_id", zone_id))
-				continue;
-
-			if (zone_id <= 0)
-			{
-				continue;
-			}
-
-			string access_node_vector_str;
-			parser.GetValueByFieldName("access_node_vector", access_node_vector_str);
-
-			std::vector<int> access_node_vector;
-
-			g_ParserIntSequence(access_node_vector_str, access_node_vector);
-
-			for (int i = 0; i < access_node_vector.size(); i++)
-			{
-				assignment.access_node_id_to_zone_id_map[access_node_vector[i]] = zone_id;
-			}
-
-			float production = 0;
-			float attraction = 0;
-			parser.GetValueByFieldName("production", production, false);
-			parser.GetValueByFieldName("attraction", attraction, false);
-
-
-			zone_id_production[zone_id] = production;
-			zone_id_attraction[zone_id] = attraction;
-			// push it to the global node vector
-			dtalog.output() << "reading " << assignment.access_node_id_to_zone_id_map.size() << " access nodes from zone.csv.. " << endl;
-		}
-
-		parser.CloseCSVFile();
-	}
-
 
 
 	dtalog.output() << "Step 1.4: Reading node data in node.csv..." << endl;
@@ -1123,7 +1424,7 @@ void g_read_input_data(Assignment& assignment)
 
 		if (layer_no == 1)
 		{
-			file_name = "micronet\\node.csv";
+			file_name = "hdnet\\node.csv";
 		}
 
 		if (parser.OpenCSVFile(file_name.c_str(), true))
@@ -1236,6 +1537,7 @@ void g_read_input_data(Assignment& assignment)
 				parser.GetValueByFieldName("node_type", node.node_type, false);// step 1 for adding access links: read node type
 				parser.GetValueByFieldName("zone_id", zone_id);
 
+
 				int analysis_district_id = 0;  // default 
 
 				parser.GetValueByFieldName("district_id", analysis_district_id, false);
@@ -1250,10 +1552,26 @@ void g_read_input_data(Assignment& assignment)
 				{
 					int idebug = 1;
 				}
-				//read from mapping created in zone file
-				if (zone_id == -1 && assignment.access_node_id_to_zone_id_map.find(node_id) != assignment.access_node_id_to_zone_id_map.end())
+
+				if (layer_no == 1 && node.is_boundary!=0)  // micro node layer and is boundary node
 				{
-					zone_id = assignment.access_node_id_to_zone_id_map[node_id];
+					double distance_to_zone = 9999999;
+
+					std::map<int, double>::iterator it_zone;
+
+					for (it_zone = assignment.subareaMRM_zone_id_X_mapping.begin(); it_zone != assignment.subareaMRM_zone_id_X_mapping.end(); ++it_zone)
+					{
+						double local_distance = pow(pow(it_zone->second - x_coord, 2) + pow(assignment.subareaMRM_zone_id_Y_mapping[it_zone->first] - y_coord, 2), 0.5);
+
+						if (local_distance < distance_to_zone)
+						{
+							zone_id = it_zone->first;
+							distance_to_zone = local_distance;  //bubble sort
+						}
+
+
+					}
+
 				}
 
 				if (zone_id >= 1)
@@ -1276,9 +1594,6 @@ void g_read_input_data(Assignment& assignment)
 				}
 
 
-				int subarea_id = -1;
-				parser.GetValueByFieldName("subarea_id", subarea_id, false);
-				node.subarea_id = subarea_id;
 				// this is an activity node // we do not allow zone id of zero
 				if (zone_id >= 1)
 				{
@@ -1343,7 +1658,7 @@ void g_read_input_data(Assignment& assignment)
 
 		if (layer_no == 1)
 		{
-			file_name = "micronet\\link.csv";
+			file_name = "hdnet\\link.csv";
 		}
 
 		if (parser_link.OpenCSVFile(file_name.c_str(), true))
@@ -1856,6 +2171,6 @@ void g_read_input_data(Assignment& assignment)
 
 
 	g_OutputModelFiles(1);
-	g_OutputModelFiles(3);
+
 
 }

@@ -682,6 +682,9 @@ public:
     std::map<int, double> zone_id_X_mapping;
     std::map<int, double> zone_id_Y_mapping;
 
+    std::map<int, double> subareaMRM_zone_id_X_mapping;
+    std::map<int, double> subareaMRM_zone_id_Y_mapping;
+
     std::vector<CDemand_Period> g_DemandPeriodVector;
     
     int g_LoadingStartTimeInMin;

@@ -5,7 +5,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerWorkingDirectory>C:\test_MRM\05_Chicago_Sketch - test</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerWorkingDirectory>C:\MRM\test\test\MRM\MAG</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerAttach>
     </LocalDebuggerAttach>
