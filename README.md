@@ -20,4 +20,4 @@ Figure 1: MRM_NetworkMerger Concept.
 
 ### Introductory Videos & Slides
 
-[How tu use MRM-NetworkMerger]([https://www.youtube.com/watch?v=dj6c6h4mWfI](https://www.youtube.com/watch?v=ejG2xRulOvI)) by Dr. Cafer Avci
+[How tu use MRM-NetworkMerger](https://www.youtube.com/watch?v=ejG2xRulOvI) by Dr. Cafer Avci
